@@ -182,9 +182,16 @@ public:
   using CGBuilderBaseTy::CreateStructGEP;
   Address CreateStructGEP(Address Addr, unsigned Index, CharUnits Offset,
                           const llvm::Twine &Name = "") {
-    return Address(CreateStructGEP(Addr.getElementType(),
-                                   Addr.getPointer(), Index, Name),
-                   Addr.getAlignment().alignmentAtOffset(Offset));
+    llvm::Value* V = CreateStructGEP(Addr.getElementType(),
+                                     Addr.getPointer(), Index, Name);
+
+    if (auto* GEP = llvm::dyn_cast<llvm::Instruction>(V)) {
+      llvm::LLVMContext& Ctxt = getContext();
+      llvm::MDNode* Node = llvm::MDNode::get(Ctxt,
+                            llvm::MDString::get(Ctxt, Name.getSingleStringRef()));
+      GEP->setMetadata("field_name", Node);
+    }
+    return Address(V, Addr.getAlignment().alignmentAtOffset(Offset));
   }
   Address CreateStructGEP(Address Addr, unsigned Index,
                           const llvm::StructLayout *Layout,
