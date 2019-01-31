@@ -24,7 +24,7 @@ Typical slowdown introduced by AddressSanitizer is **2x**.
 How to build
 ============
 
-Build LLVM/Clang with `CMake <http://llvm.org/docs/CMake.html>`_.
+Build LLVM/Clang with `CMake <https://llvm.org/docs/CMake.html>`_.
 
 Usage
 =====
@@ -140,7 +140,8 @@ Memory leak detection
 ---------------------
 
 For more information on leak detector in AddressSanitizer, see
-:doc:`LeakSanitizer`. The leak detection is turned on by default on Linux;
+:doc:`LeakSanitizer`. The leak detection is turned on by default on Linux,
+and can be enabled using ``ASAN_OPTIONS=detect_leaks=1`` on OS X;
 however, it is not yet supported on other platforms.
 
 Issue Suppression
@@ -196,12 +197,16 @@ this purpose.
 Disabling Instrumentation with ``__attribute__((no_sanitize("address")))``
 --------------------------------------------------------------------------
 
-Some code should not be instrumented by AddressSanitizer. One may use the
-function attribute ``__attribute__((no_sanitize("address")))`` (which has
-deprecated synonyms `no_sanitize_address` and `no_address_safety_analysis`) to
-disable instrumentation of a particular function. This attribute may not be
-supported by other compilers, so we suggest to use it together with
+Some code should not be instrumented by AddressSanitizer. One may use
+the attribute ``__attribute__((no_sanitize("address")))`` (which has
+deprecated synonyms `no_sanitize_address` and
+`no_address_safety_analysis`) to disable instrumentation of a
+particular function. This attribute may not be supported by other
+compilers, so we suggest to use it together with
 ``__has_feature(address_sanitizer)``.
+
+The same attribute used on a global variable prevents AddressSanitizer
+from adding redzones around it and detecting out of bounds accesses.
 
 Suppressing Errors in Recompiled Code (Blacklist)
 -------------------------------------------------
@@ -260,7 +265,7 @@ Limitations
 * On 64-bit platforms AddressSanitizer maps (but not reserves) 16+ Terabytes of
   virtual address space. This means that tools like ``ulimit`` may not work as
   usually expected.
-* Static linking is not supported.
+* Static linking of executables is not supported.
 
 Supported Platforms
 ===================
@@ -271,7 +276,9 @@ AddressSanitizer is supported on:
 * OS X 10.7 - 10.11 (i386/x86\_64)
 * iOS Simulator
 * Android ARM
+* NetBSD i386/x86\_64
 * FreeBSD i386/x86\_64 (tested on FreeBSD 11-current)
+* Windows 8.1+ (i386/x86\_64)
 
 Ports to various other platforms are in progress.
 
@@ -281,6 +288,9 @@ Current Status
 AddressSanitizer is fully functional on supported platforms starting from LLVM
 3.1. The test suite is integrated into CMake build and can be run with ``make
 check-asan`` command.
+
+The Windows port is functional and is used by Chrome and Firefox, but it is not
+as well supported as the other ports.
 
 More Information
 ================

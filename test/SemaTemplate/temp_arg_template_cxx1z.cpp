@@ -70,33 +70,51 @@ namespace Auto {
   template<template<int*> typename T> struct TIntPtr {};
   template<template<auto> typename T> struct TAuto {};
   template<template<auto*> typename T> struct TAutoPtr {};
+  template<template<decltype(auto)> typename T> struct TDecltypeAuto {};
   template<auto> struct Auto;
   template<auto*> struct AutoPtr;
+  template<decltype(auto)> struct DecltypeAuto;
   template<int> struct Int;
   template<int*> struct IntPtr;
 
   TInt<Auto> ia;
-  TInt<AutoPtr> iap; // FIXME: ill-formed
+  TInt<AutoPtr> iap; // FIXME: ill-formed (?)
+  TInt<DecltypeAuto> ida;
   TInt<Int> ii;
   TInt<IntPtr> iip; // expected-error {{different template parameters}}
 
   TIntPtr<Auto> ipa;
   TIntPtr<AutoPtr> ipap;
+  TIntPtr<DecltypeAuto> ipda;
   TIntPtr<Int> ipi; // expected-error {{different template parameters}}
   TIntPtr<IntPtr> ipip;
 
   TAuto<Auto> aa;
-  TAuto<AutoPtr> aap; // FIXME: ill-formed
-  TAuto<Int> ai; // FIXME: ill-formed
-  TAuto<IntPtr> aip; // FIXME: ill-formed
+  TAuto<AutoPtr> aap; // FIXME: ill-formed (?)
+  TAuto<Int> ai; // FIXME: ill-formed (?)
+  TAuto<IntPtr> aip; // FIXME: ill-formed (?)
 
   TAutoPtr<Auto> apa;
   TAutoPtr<AutoPtr> apap;
-  TAutoPtr<Int> api; // FIXME: ill-formed
-  TAutoPtr<IntPtr> apip; // FIXME: ill-formed
+  TAutoPtr<Int> api; // FIXME: ill-formed (?)
+  TAutoPtr<IntPtr> apip; // FIXME: ill-formed (?)
+
+  TDecltypeAuto<DecltypeAuto> dada;
+  TDecltypeAuto<Int> dai; // FIXME: ill-formed (?)
+  TDecltypeAuto<IntPtr> daip; // FIXME: ill-formed (?)
+
+  // FIXME: It's completely unclear what should happen here, but these results
+  // seem at least plausible:
+  TAuto<DecltypeAuto> ada;
+  TAutoPtr<DecltypeAuto> apda;
+  // Perhaps this case should be invalid, as there are valid 'decltype(auto)'
+  // parameters (such as 'user-defined-type &') that are not valid 'auto'
+  // parameters.
+  TDecltypeAuto<Auto> daa;
+  TDecltypeAuto<AutoPtr> daap; // FIXME: should probably be ill-formed
 
   int n;
   template<auto A, decltype(A) B = &n> struct SubstFailure;
-  TInt<SubstFailure> isf; // expected-error {{different template parameters}}
-  TIntPtr<SubstFailure> ipsf; // expected-error {{different template parameters}}
+  TInt<SubstFailure> isf; // FIXME: this should be ill-formed
+  TIntPtr<SubstFailure> ipsf;
 }

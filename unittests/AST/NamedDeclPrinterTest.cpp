@@ -1,9 +1,8 @@
 //===- unittests/AST/NamedDeclPrinterTest.cpp --- NamedDecl printer tests -===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -143,7 +142,7 @@ TEST(NamedDeclPrinter, TestNamedEnum) {
   ASSERT_TRUE(PrintedWrittenNamedDeclCXX11Matches(
     "enum X { A };",
     "A",
-    "X::A"));
+    "A"));
 }
 
 TEST(NamedDeclPrinter, TestScopedNamedEnum) {
@@ -164,7 +163,7 @@ TEST(NamedDeclPrinter, TestClassWithUnscopedNamedEnum) {
   ASSERT_TRUE(PrintedWrittenNamedDeclCXX11Matches(
     "class X { enum Y { A }; };",
     "A",
-    "X::Y::A"));
+    "X::A"));
 }
 
 TEST(NamedDeclPrinter, TestClassWithScopedNamedEnum) {
@@ -172,4 +171,11 @@ TEST(NamedDeclPrinter, TestClassWithScopedNamedEnum) {
     "class X { enum class Y { A }; };",
     "A",
     "X::Y::A"));
+}
+
+TEST(NamedDeclPrinter, TestLinkageInNamespace) {
+  ASSERT_TRUE(PrintedWrittenNamedDeclCXX11Matches(
+    "namespace X { extern \"C\" { int A; } }",
+    "A",
+    "X::A"));
 }

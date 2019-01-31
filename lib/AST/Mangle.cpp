@@ -1,9 +1,8 @@
 //===--- Mangle.cpp - Mangle C++ Names --------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -25,12 +24,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 
-#define MANGLE_CHECKER 0
-
-#if MANGLE_CHECKER
-#include <cxxabi.h>
-#endif
-
 using namespace clang;
 
 // FIXME: For blocks we currently mimic GCC's mangling scheme, which leaves
@@ -44,7 +37,7 @@ static void mangleFunctionBlock(MangleContext &Context,
   if (discriminator == 0)
     Out << "__" << Outer << "_block_invoke";
   else
-    Out << "__" << Outer << "_block_invoke_" << discriminator+1; 
+    Out << "__" << Outer << "_block_invoke_" << discriminator+1;
 }
 
 void MangleContext::anchor() { }
@@ -101,6 +94,11 @@ bool MangleContext::shouldMangleDeclName(const NamedDecl *D) {
 
   CCMangling CC = getCallingConvMangling(ASTContext, D);
   if (CC != CCM_Other)
+    return true;
+
+  // If the declaration has an owning module for linkage purposes that needs to
+  // be mangled, we must mangle its name.
+  if (!D->hasExternalFormalLinkage() && D->getOwningModuleForLinkage())
     return true;
 
   // In C, functions with no attributes never need to be mangled. Fastpath them.
@@ -262,9 +260,13 @@ void MangleContext::mangleObjCMethodNameWithoutSize(const ObjCMethodDecl *MD,
   const ObjCContainerDecl *CD =
   dyn_cast<ObjCContainerDecl>(MD->getDeclContext());
   assert (CD && "Missing container decl in GetNameForMethod");
-  OS << (MD->isInstanceMethod() ? '-' : '+') << '[' << CD->getName();
-  if (const ObjCCategoryImplDecl *CID = dyn_cast<ObjCCategoryImplDecl>(CD))
+  OS << (MD->isInstanceMethod() ? '-' : '+') << '[';
+  if (const ObjCCategoryImplDecl *CID = dyn_cast<ObjCCategoryImplDecl>(CD)) {
+    OS << CID->getClassInterface()->getName();
     OS << '(' << *CID << ')';
+  } else {
+    OS << CD->getName();
+  }
   OS << ' ';
   MD->getSelector().print(OS);
   OS << ']';

@@ -1,9 +1,8 @@
 //===- unittests/Analysis/CFGTest.cpp - CFG tests -------------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -35,7 +34,9 @@ public:
     if (!Body)
       return;
     TheBuildResult = SawFunctionBody;
-    if (CFG::buildCFG(nullptr, Body, Result.Context, CFG::BuildOptions()))
+    CFG::BuildOptions Options;
+    Options.AddImplicitDtors = true;
+    if (CFG::buildCFG(nullptr, Body, Result.Context, Options))
         TheBuildResult = BuiltCFG;
   }
 };
@@ -71,6 +72,16 @@ TEST(CFG, DeleteExpressionOnDependentType) {
   const char *Code = "template<class T>\n"
                      "void f(T t) {\n"
                      "  delete t;\n"
+                     "}\n";
+  EXPECT_EQ(BuiltCFG, BuildCFG(Code));
+}
+
+// Constructing a CFG on a function template with a variable of incomplete type
+// should not crash.
+TEST(CFG, VariableOfIncompleteType) {
+  const char *Code = "template<class T> void f() {\n"
+                     "  class Undefined;\n"
+                     "  Undefined u;\n"
                      "}\n";
   EXPECT_EQ(BuiltCFG, BuildCFG(Code));
 }

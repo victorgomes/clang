@@ -3,7 +3,6 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_clang_library(clangStaticAnalyzerCheckers
-  AllocationDiagnostics.cpp
   AnalysisOrderChecker.cpp
   AnalyzerStatsChecker.cpp
   ArrayBoundChecker.cpp
@@ -23,23 +22,26 @@ add_clang_library(clangStaticAnalyzerCheckers
   CheckSizeofPointer.cpp
   CheckerDocumentation.cpp
   ChrootChecker.cpp
-  ClangCheckers.cpp
   CloneChecker.cpp
   ConversionChecker.cpp
   CXXSelfAssignmentChecker.cpp
   DeadStoresChecker.cpp
   DebugCheckers.cpp
+  DeleteWithNonVirtualDtorChecker.cpp
   DereferenceChecker.cpp
   DirectIvarAssignment.cpp
   DivZeroChecker.cpp
   DynamicTypePropagation.cpp
   DynamicTypeChecker.cpp
+  EnumCastOutOfRangeChecker.cpp
   ExprInspectionChecker.cpp
   FixedAddressChecker.cpp
+  GCDAntipatternChecker.cpp
   GenericTaintChecker.cpp
   GTestChecker.cpp
   IdenticalExprChecker.cpp
-  IteratorPastEndChecker.cpp
+  InnerPointerChecker.cpp
+  IteratorChecker.cpp
   IvarInvalidationChecker.cpp
   LLVMConventionsChecker.cpp
   LocalizationChecker.cpp
@@ -48,6 +50,8 @@ add_clang_library(clangStaticAnalyzerCheckers
   MallocChecker.cpp
   MallocOverflowSecurityChecker.cpp
   MallocSizeofChecker.cpp
+  MmapWriteExecChecker.cpp
+  MoveChecker.cpp
   MPI-Checker/MPIBugReporter.cpp
   MPI-Checker/MPIChecker.cpp
   MPI-Checker/MPIFunctionClassifier.cpp
@@ -55,9 +59,11 @@ add_clang_library(clangStaticAnalyzerCheckers
   NSErrorChecker.cpp
   NoReturnFunctionChecker.cpp
   NonNullParamChecker.cpp
+  NonnullGlobalConstantsChecker.cpp
   NullabilityChecker.cpp
   NumberObjectConversionChecker.cpp
   ObjCAtSyncChecker.cpp
+  ObjCAutoreleaseWriteChecker.cpp
   ObjCContainersASTChecker.cpp
   ObjCContainersChecker.cpp
   ObjCMissingSuperCallChecker.cpp
@@ -69,9 +75,11 @@ add_clang_library(clangStaticAnalyzerCheckers
   PointerArithChecker.cpp
   PointerSubChecker.cpp
   PthreadLockChecker.cpp
-  RetainCountChecker.cpp
+  RetainCountChecker/RetainCountChecker.cpp
+  RetainCountChecker/RetainCountDiagnostics.cpp
   ReturnPointerRangeChecker.cpp
   ReturnUndefChecker.cpp
+  RunLoopAutoreleaseLeakChecker.cpp
   SimpleStreamChecker.cpp
   StackAddrEscapeChecker.cpp
   StdLibraryFunctionsChecker.cpp
@@ -79,20 +87,20 @@ add_clang_library(clangStaticAnalyzerCheckers
   TaintTesterChecker.cpp
   TestAfterDivZeroChecker.cpp
   TraversalChecker.cpp
+  TrustNonnullChecker.cpp
   UndefBranchChecker.cpp
   UndefCapturedBlockVarChecker.cpp
   UndefResultChecker.cpp
   UndefinedArraySubscriptChecker.cpp
   UndefinedAssignmentChecker.cpp
+  UninitializedObject/UninitializedObjectChecker.cpp
+  UninitializedObject/UninitializedPointee.cpp
   UnixAPIChecker.cpp
   UnreachableCodeChecker.cpp
   VforkChecker.cpp
   VLASizeChecker.cpp
   ValistChecker.cpp
   VirtualCallChecker.cpp
-
-  DEPENDS
-  ClangSACheckers
 
   LINK_LIBS
   clangAST

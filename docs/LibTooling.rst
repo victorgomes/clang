@@ -130,7 +130,7 @@ version of this example tool is also checked into the clang tree at
   static cl::extrahelp CommonHelp(CommonOptionsParser::HelpMessage);
 
   // A help message for this specific tool can be added afterwards.
-  static cl::extrahelp MoreHelp("\nMore help text...");
+  static cl::extrahelp MoreHelp("\nMore help text...\n");
 
   int main(int argc, const char **argv) {
     CommonOptionsParser OptionsParser(argc, argv, MyToolCategory);
@@ -196,6 +196,6 @@ with ``-v`` and look at the search paths it looks through.
 Linking
 ^^^^^^^
 
-For a list of libraries to link, look at one of the tools' Makefiles (for
-example `clang-check/Makefile
-<http://llvm.org/viewvc/llvm-project/cfe/trunk/tools/clang-check/Makefile?view=markup>`_).
+For a list of libraries to link, look at one of the tools' CMake files (for
+example `clang-check/CMakeList.txt
+<https://github.com/llvm/llvm-project/blob/master/clang/tools/clang-check/CMakeLists.txt>`_).

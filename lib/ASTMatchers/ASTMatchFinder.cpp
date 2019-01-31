@@ -1,9 +1,8 @@
 //===--- ASTMatchFinder.cpp - Structural query framework ------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -145,17 +144,22 @@ public:
     ScopedIncrement ScopedDepth(&CurrentDepth);
     return (DeclNode == nullptr) || traverse(*DeclNode);
   }
-  bool TraverseStmt(Stmt *StmtNode) {
+  bool TraverseStmt(Stmt *StmtNode, DataRecursionQueue *Queue = nullptr) {
+    // If we need to keep track of the depth, we can't perform data recursion.
+    if (CurrentDepth == 0 || (CurrentDepth <= MaxDepth && MaxDepth < INT_MAX))
+      Queue = nullptr;
+
     ScopedIncrement ScopedDepth(&CurrentDepth);
-    const Stmt *StmtToTraverse = StmtNode;
-    if (Traversal ==
-        ASTMatchFinder::TK_IgnoreImplicitCastsAndParentheses) {
-      const Expr *ExprNode = dyn_cast_or_null<Expr>(StmtNode);
-      if (ExprNode) {
+    Stmt *StmtToTraverse = StmtNode;
+    if (Traversal == ASTMatchFinder::TK_IgnoreImplicitCastsAndParentheses) {
+      if (Expr *ExprNode = dyn_cast_or_null<Expr>(StmtNode))
         StmtToTraverse = ExprNode->IgnoreParenImpCasts();
-      }
     }
-    return (StmtToTraverse == nullptr) || traverse(*StmtToTraverse);
+    if (!StmtToTraverse)
+      return true;
+    if (!match(*StmtToTraverse))
+      return false;
+    return VisitorBase::TraverseStmt(StmtToTraverse, Queue);
   }
   // We assume that the QualType and the contained type are on the same
   // hierarchy level. Thus, we try to match either of them.
@@ -378,7 +382,7 @@ public:
   }
 
   bool TraverseDecl(Decl *DeclNode);
-  bool TraverseStmt(Stmt *StmtNode);
+  bool TraverseStmt(Stmt *StmtNode, DataRecursionQueue *Queue = nullptr);
   bool TraverseType(QualType TypeNode);
   bool TraverseTypeLoc(TypeLoc TypeNode);
   bool TraverseNestedNameSpecifier(NestedNameSpecifier *NNS);
@@ -506,7 +510,7 @@ private:
     TimeBucketRegion() : Bucket(nullptr) {}
     ~TimeBucketRegion() { setBucket(nullptr); }
 
-    /// \brief Start timing for \p NewBucket.
+    /// Start timing for \p NewBucket.
     ///
     /// If there was a bucket already set, it will finish the timing for that
     /// other bucket.
@@ -529,7 +533,7 @@ private:
     llvm::TimeRecord *Bucket;
   };
 
-  /// \brief Runs all the \p Matchers on \p Node.
+  /// Runs all the \p Matchers on \p Node.
   ///
   /// Used by \c matchDispatch() below.
   template <typename T, typename MC>
@@ -585,7 +589,7 @@ private:
   }
 
   /// @{
-  /// \brief Overloads to pair the different node types to their matchers.
+  /// Overloads to pair the different node types to their matchers.
   void matchDispatch(const Decl *Node) {
     return matchWithFilter(ast_type_traits::DynTypedNode::create(*Node));
   }
@@ -630,10 +634,6 @@ private:
   bool memoizedMatchesAncestorOfRecursively(
       const ast_type_traits::DynTypedNode &Node, const DynTypedMatcher &Matcher,
       BoundNodesTreeBuilder *Builder, AncestorMatchMode MatchMode) {
-    if (Node.get<TranslationUnitDecl>() ==
-        ActiveASTContext->getTranslationUnitDecl())
-      return false;
-
     // For AST-nodes that don't have an identity, we can't memoize.
     if (!Builder->isComparable())
       return matchesAncestorOfRecursively(Node, Matcher, Builder, MatchMode);
@@ -668,7 +668,26 @@ private:
                                     BoundNodesTreeBuilder *Builder,
                                     AncestorMatchMode MatchMode) {
     const auto &Parents = ActiveASTContext->getParents(Node);
-    assert(!Parents.empty() && "Found node that is not in the parent map.");
+    if (Parents.empty()) {
+      // Nodes may have no parents if:
+      //  a) the node is the TranslationUnitDecl
+      //  b) we have a limited traversal scope that excludes the parent edges
+      //  c) there is a bug in the AST, and the node is not reachable
+      // Usually the traversal scope is the whole AST, which precludes b.
+      // Bugs are common enough that it's worthwhile asserting when we can.
+#ifndef NDEBUG
+      if (!Node.get<TranslationUnitDecl>() &&
+          /* Traversal scope is full AST if any of the bounds are the TU */
+          llvm::any_of(ActiveASTContext->getTraversalScope(), [](Decl *D) {
+            return D->getKind() == Decl::TranslationUnit;
+          })) {
+        llvm::errs() << "Tried to match orphan node:\n";
+        Node.dump(llvm::errs(), ActiveASTContext->getSourceManager());
+        llvm_unreachable("Parent map should be complete!");
+      }
+#endif
+      return false;
+    }
     if (Parents.size() == 1) {
       // Only one parent - do recursive memoization.
       const ast_type_traits::DynTypedNode Parent = Parents[0];
@@ -734,7 +753,10 @@ private:
                             BoundNodesTreeBuilder *Builder) {
     const Type *const CanonicalType =
       ActiveASTContext->getCanonicalType(TypeNode);
-    for (const TypedefNameDecl *Alias : TypeAliases.lookup(CanonicalType)) {
+    auto Aliases = TypeAliases.find(CanonicalType);
+    if (Aliases == TypeAliases.end())
+      return false;
+    for (const TypedefNameDecl *Alias : Aliases->second) {
       BoundNodesTreeBuilder Result(*Builder);
       if (Matcher.matches(*Alias, this, &Result)) {
         *Builder = std::move(Result);
@@ -744,14 +766,14 @@ private:
     return false;
   }
 
-  /// \brief Bucket to record map.
+  /// Bucket to record map.
   ///
   /// Used to get the appropriate bucket for each matcher.
   llvm::StringMap<llvm::TimeRecord> TimeByBucket;
 
   const MatchFinder::MatchersByType *Matchers;
 
-  /// \brief Filtered list of matcher indices for each matcher kind.
+  /// Filtered list of matcher indices for each matcher kind.
   ///
   /// \c Decl and \c Stmt toplevel matchers usually apply to a specific node
   /// kind (and derived kinds) so it is a waste to try every matcher on every
@@ -838,12 +860,12 @@ bool MatchASTVisitor::TraverseDecl(Decl *DeclNode) {
   return RecursiveASTVisitor<MatchASTVisitor>::TraverseDecl(DeclNode);
 }
 
-bool MatchASTVisitor::TraverseStmt(Stmt *StmtNode) {
+bool MatchASTVisitor::TraverseStmt(Stmt *StmtNode, DataRecursionQueue *Queue) {
   if (!StmtNode) {
     return true;
   }
   match(*StmtNode);
-  return RecursiveASTVisitor<MatchASTVisitor>::TraverseStmt(StmtNode);
+  return RecursiveASTVisitor<MatchASTVisitor>::TraverseStmt(StmtNode, Queue);
 }
 
 bool MatchASTVisitor::TraverseType(QualType TypeNode) {
@@ -1011,7 +1033,7 @@ void MatchFinder::matchAST(ASTContext &Context) {
   internal::MatchASTVisitor Visitor(&Matchers, Options);
   Visitor.set_active_ast_context(&Context);
   Visitor.onStartOfTranslationUnit();
-  Visitor.TraverseDecl(Context.getTranslationUnitDecl());
+  Visitor.TraverseAST(Context);
   Visitor.onEndOfTranslationUnit();
 }
 

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -analyze -analyzer-checker=core,debug.ExprInspection -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -verify %s
 
 void clang_analyzer_eval(bool);
 
@@ -77,7 +77,8 @@ bool testDereferencing() {
 namespace testPointerToMemberFunction {
   struct A {
     virtual int foo() { return 1; }
-    int bar() { return 2;  }
+    int bar() { return 2; }
+    int static staticMemberFunction(int p) { return p + 1; };
   };
 
   struct B : public A {
@@ -111,11 +112,19 @@ namespace testPointerToMemberFunction {
 
     clang_analyzer_eval((APtr->*AFP)() == 3); // expected-warning{{TRUE}}
   }
+
+  void testPointerToStaticMemberCall() {
+    int (*fPtr)(int) = &A::staticMemberFunction;
+    if (fPtr != 0) { // no-crash
+      clang_analyzer_eval(fPtr(2) == 3); // expected-warning{{TRUE}}
+    }
+  }
 } // end of testPointerToMemberFunction namespace
 
 namespace testPointerToMemberData {
   struct A {
     int i;
+    static int j;
   };
 
   void testPointerToMemberData() {
@@ -126,6 +135,13 @@ namespace testPointerToMemberData {
     a.*AMdPointer += 1;
 
     clang_analyzer_eval(a.i == 43); // expected-warning{{TRUE}}
+
+    int *ptrToStaticField = &A::j;
+    if (ptrToStaticField != 0) {
+      *ptrToStaticField = 7;
+      clang_analyzer_eval(*ptrToStaticField == 7); // expected-warning{{TRUE}}
+      clang_analyzer_eval(A::j == 7); // expected-warning{{TRUE}}
+    }
   }
 } // end of testPointerToMemberData namespace
 
@@ -214,3 +230,42 @@ void double_diamond() {
   clang_analyzer_eval(d2.*(static_cast<int D2::*>(static_cast<int R2::*>(static_cast<int R1::*>(&B::f)))) == 4); // expected-warning {{TRUE}}
 }
 } // end of testPointerToMemberDiamond namespace
+
+namespace testAnonymousMember {
+struct A {
+  struct {
+    int x;
+  };
+  struct {
+    struct {
+      int y;
+    };
+  };
+  struct {
+    union {
+      int z;
+    };
+  };
+};
+
+void test() {
+  clang_analyzer_eval(&A::x); // expected-warning{{TRUE}}
+  clang_analyzer_eval(&A::y); // expected-warning{{TRUE}}
+  clang_analyzer_eval(&A::z); // expected-warning{{TRUE}}
+
+  // FIXME: These should be true.
+  int A::*l = &A::x, A::*m = &A::y, A::*n = &A::z;
+  clang_analyzer_eval(l); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(m); // expected-warning{{UNKNOWN}}
+  clang_analyzer_eval(n); // expected-warning{{UNKNOWN}}
+
+  // FIXME: These should be true as well.
+  A a;
+  a.x = 1;
+  clang_analyzer_eval(a.*l == 1); // expected-warning{{UNKNOWN}}
+  a.y = 2;
+  clang_analyzer_eval(a.*m == 2); // expected-warning{{UNKNOWN}}
+  a.z = 3;
+  clang_analyzer_eval(a.*n == 3); // expected-warning{{UNKNOWN}}
+}
+} // end of testAnonymousMember namespace

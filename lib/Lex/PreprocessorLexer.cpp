@@ -1,9 +1,8 @@
-//===--- PreprocessorLexer.cpp - C Language Family Lexer ------------------===//
+//===- PreprocessorLexer.cpp - C Language Family Lexer --------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -15,19 +14,20 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Lex/LexDiagnostic.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Lex/Token.h"
+#include <cassert>
+
 using namespace clang;
 
-void PreprocessorLexer::anchor() { }
+void PreprocessorLexer::anchor() {}
 
 PreprocessorLexer::PreprocessorLexer(Preprocessor *pp, FileID fid)
-  : PP(pp), FID(fid), InitialNumSLocEntries(0),
-    ParsingPreprocessorDirective(false),
-    ParsingFilename(false), LexingRawMode(false) {
+    : PP(pp), FID(fid) {
   if (pp)
     InitialNumSLocEntries = pp->getSourceManager().local_sloc_entry_size();
 }
 
-/// \brief After the preprocessor has parsed a \#include, lex and
+/// After the preprocessor has parsed a \#include, lex and
 /// (potentially) macro expand the filename.
 void PreprocessorLexer::LexIncludeFilename(Token &FilenameTok) {
   assert(ParsingPreprocessorDirective &&

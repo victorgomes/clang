@@ -1,9 +1,8 @@
 //===- unittests/Frontend/FrontendActionTest.cpp - FrontendAction tests ---===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -37,12 +36,11 @@ public:
   bool ActOnEndOfTranslationUnit;
   std::vector<std::string> decl_names;
 
-  bool BeginSourceFileAction(CompilerInstance &ci,
-                             StringRef filename) override {
+  bool BeginSourceFileAction(CompilerInstance &ci) override {
     if (EnableIncrementalProcessing)
       ci.getPreprocessor().enableIncrementalProcessing();
 
-    return ASTFrontendAction::BeginSourceFileAction(ci, filename);
+    return ASTFrontendAction::BeginSourceFileAction(ci);
   }
 
   std::unique_ptr<ASTConsumer> CreateASTConsumer(CompilerInstance &CI,
@@ -83,8 +81,8 @@ TEST(ASTFrontendAction, Sanity) {
   invocation->getPreprocessorOpts().addRemappedFile(
       "test.cc",
       MemoryBuffer::getMemBuffer("int main() { float x; }").release());
-  invocation->getFrontendOpts().Inputs.push_back(FrontendInputFile("test.cc",
-                                                                   IK_CXX));
+  invocation->getFrontendOpts().Inputs.push_back(
+      FrontendInputFile("test.cc", InputKind::CXX));
   invocation->getFrontendOpts().ProgramAction = frontend::ParseSyntaxOnly;
   invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
   CompilerInstance compiler;
@@ -103,8 +101,8 @@ TEST(ASTFrontendAction, IncrementalParsing) {
   invocation->getPreprocessorOpts().addRemappedFile(
       "test.cc",
       MemoryBuffer::getMemBuffer("int main() { float x; }").release());
-  invocation->getFrontendOpts().Inputs.push_back(FrontendInputFile("test.cc",
-                                                                   IK_CXX));
+  invocation->getFrontendOpts().Inputs.push_back(
+      FrontendInputFile("test.cc", InputKind::CXX));
   invocation->getFrontendOpts().ProgramAction = frontend::ParseSyntaxOnly;
   invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
   CompilerInstance compiler;
@@ -130,8 +128,8 @@ TEST(ASTFrontendAction, LateTemplateIncrementalParsing) {
       "  B(B const& b): A<T>(b.data) {}\n"
       "};\n"
       "B<char> c() { return B<char>(); }\n").release());
-  invocation->getFrontendOpts().Inputs.push_back(FrontendInputFile("test.cc",
-                                                                   IK_CXX));
+  invocation->getFrontendOpts().Inputs.push_back(
+      FrontendInputFile("test.cc", InputKind::CXX));
   invocation->getFrontendOpts().ProgramAction = frontend::ParseSyntaxOnly;
   invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
   CompilerInstance compiler;
@@ -177,7 +175,7 @@ TEST(PreprocessorFrontendAction, EndSourceFile) {
       "test.cc",
       MemoryBuffer::getMemBuffer("int main() { float x; }").release());
   Invocation->getFrontendOpts().Inputs.push_back(
-      FrontendInputFile("test.cc", IK_CXX));
+      FrontendInputFile("test.cc", InputKind::CXX));
   Invocation->getFrontendOpts().ProgramAction = frontend::ParseSyntaxOnly;
   Invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
   CompilerInstance Compiler;
@@ -238,7 +236,7 @@ TEST(ASTFrontendAction, ExternalSemaSource) {
                                             "int main() { foo(); }")
                      .release());
   Invocation->getFrontendOpts().Inputs.push_back(
-      FrontendInputFile("test.cc", IK_CXX));
+      FrontendInputFile("test.cc", InputKind::CXX));
   Invocation->getFrontendOpts().ProgramAction = frontend::ParseSyntaxOnly;
   Invocation->getTargetOpts().Triple = "i386-unknown-linux-gnu";
   CompilerInstance Compiler;

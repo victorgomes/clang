@@ -1,9 +1,8 @@
 //===- CodegenNameGenerator.cpp - Codegen name generation -----------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -68,7 +67,38 @@ struct CodegenNameGenerator::Implementation {
     return Name;
   }
 
+  enum ObjCKind {
+    ObjCClass,
+    ObjCMetaclass,
+  };
+
+  std::vector<std::string> getAllManglings(const ObjCContainerDecl *OCD) {
+    StringRef ClassName;
+    if (const auto *OID = dyn_cast<ObjCInterfaceDecl>(OCD))
+      ClassName = OID->getObjCRuntimeNameAsString();
+    else if (const auto *OID = dyn_cast<ObjCImplementationDecl>(OCD))
+      ClassName = OID->getObjCRuntimeNameAsString();
+
+    if (ClassName.empty())
+      return {};
+
+    auto Mangle = [&](ObjCKind Kind, StringRef ClassName) -> std::string {
+      SmallString<40> Mangled;
+      auto Prefix = getClassSymbolPrefix(Kind, OCD->getASTContext());
+      llvm::Mangler::getNameWithPrefix(Mangled, Prefix + ClassName, DL);
+      return Mangled.str();
+    };
+
+    return {
+      Mangle(ObjCClass, ClassName),
+      Mangle(ObjCMetaclass, ClassName),
+    };
+  }
+
   std::vector<std::string> getAllManglings(const Decl *D) {
+    if (const auto *OCD = dyn_cast<ObjCContainerDecl>(D))
+      return getAllManglings(OCD);
+
     if (!(isa<CXXRecordDecl>(D) || isa<CXXMethodDecl>(D)))
       return {};
 
@@ -135,12 +165,14 @@ private:
   }
 
   void writeObjCClassName(const ObjCInterfaceDecl *D, raw_ostream &OS) {
-    OS << getClassSymbolPrefix();
+    OS << getClassSymbolPrefix(ObjCClass, D->getASTContext());
     OS << D->getObjCRuntimeNameAsString();
   }
 
-  static StringRef getClassSymbolPrefix() {
-    return "OBJC_CLASS_$_";
+  static StringRef getClassSymbolPrefix(ObjCKind Kind, const ASTContext &Context) {
+    if (Context.getLangOpts().ObjCRuntime.isGNUFamily())
+      return Kind == ObjCMetaclass ? "_OBJC_METACLASS_" : "_OBJC_CLASS_";
+    return Kind == ObjCMetaclass ? "OBJC_METACLASS_$_" : "OBJC_CLASS_$_";
   }
 
   std::string getMangledStructor(const NamedDecl *ND, unsigned StructorType) {

@@ -1,9 +1,8 @@
 //===- ASTCommon.h - Common stuff for ASTReader/ASTWriter -*- C++ -*-=========//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -27,7 +26,8 @@ enum DeclUpdateKind {
   UPD_CXX_ADDED_TEMPLATE_SPECIALIZATION,
   UPD_CXX_ADDED_ANONYMOUS_NAMESPACE,
   UPD_CXX_ADDED_FUNCTION_DEFINITION,
-  UPD_CXX_INSTANTIATED_STATIC_DATA_MEMBER,
+  UPD_CXX_ADDED_VAR_DEFINITION,
+  UPD_CXX_POINT_OF_INSTANTIATION,
   UPD_CXX_INSTANTIATED_CLASS_DEFINITION,
   UPD_CXX_INSTANTIATED_DEFAULT_ARGUMENT,
   UPD_CXX_INSTANTIATED_DEFAULT_MEMBER_INITIALIZER,
@@ -71,7 +71,7 @@ TypeID MakeTypeID(ASTContext &Context, QualType T, IdxForTypeTy IdxForType) {
 
 unsigned ComputeHash(Selector Sel);
 
-/// \brief Retrieve the "definitive" declaration that provides all of the
+/// Retrieve the "definitive" declaration that provides all of the
 /// visible entries for the given declaration context, if there is one.
 ///
 /// The "definitive" declaration is the only place where we need to look to
@@ -83,14 +83,14 @@ unsigned ComputeHash(Selector Sel);
 /// multiple definitions.
 const DeclContext *getDefinitiveDeclContext(const DeclContext *DC);
 
-/// \brief Determine whether the given declaration kind is redeclarable.
+/// Determine whether the given declaration kind is redeclarable.
 bool isRedeclarableDeclKind(unsigned Kind);
 
-/// \brief Determine whether the given declaration needs an anonymous
+/// Determine whether the given declaration needs an anonymous
 /// declaration number.
 bool needsAnonymousDeclarationNumber(const NamedDecl *D);
 
-/// \brief Visit each declaration within \c DC that needs an anonymous
+/// Visit each declaration within \c DC that needs an anonymous
 /// declaration number and call \p Visit with the declaration and its number.
 template<typename Fn> void numberAnonymousDeclsWithin(const DeclContext *DC,
                                                       Fn Visit) {

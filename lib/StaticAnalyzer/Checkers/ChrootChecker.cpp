@@ -1,9 +1,8 @@
 //===- Chrootchecker.cpp -------- Basic security checks ---------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -11,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ClangSACheckers.h"
+#include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
@@ -105,7 +104,7 @@ void ChrootChecker::Chdir(CheckerContext &C, const CallExpr *CE) const {
 
   // After chdir("/"), enter the jail, set the enum value JAIL_ENTERED.
   const Expr *ArgExpr = CE->getArg(0);
-  SVal ArgVal = state->getSVal(ArgExpr, C.getLocationContext());
+  SVal ArgVal = C.getSVal(ArgExpr);
 
   if (const MemRegion *R = ArgVal.getAsRegion()) {
     R = R->StripCasts();
@@ -132,7 +131,7 @@ void ChrootChecker::checkPreStmt(const CallExpr *CE, CheckerContext &C) const {
   if (!II_chdir)
     II_chdir = &Ctx.Idents.get("chdir");
 
-  // Ingnore chroot and chdir.
+  // Ignore chroot and chdir.
   if (FD->getIdentifier() == II_chroot || FD->getIdentifier() == II_chdir)
     return;
 
@@ -152,4 +151,8 @@ void ChrootChecker::checkPreStmt(const CallExpr *CE, CheckerContext &C) const {
 
 void ento::registerChrootChecker(CheckerManager &mgr) {
   mgr.registerChecker<ChrootChecker>();
+}
+
+bool ento::shouldRegisterChrootChecker(const LangOptions &LO) {
+  return true;
 }

@@ -77,7 +77,7 @@ int main() {
   Foo_fun1(1); // expected-warning{{calling function 'Foo_fun1' requires holding mutex 'mu2'}} \
                   expected-warning{{calling function 'Foo_fun1' requires holding mutex 'mu1' exclusively}}
 
-  mutex_exclusive_lock(&mu1);
+  mutex_exclusive_lock(&mu1); // expected-note{{mutex acquired here}}
   mutex_shared_lock(&mu2);
   Foo_fun1(1);
 
@@ -130,4 +130,4 @@ int main() {
 
 // We had a problem where we'd skip all attributes that follow a late-parsed
 // attribute in a single __attribute__.
-void run() __attribute__((guarded_by(mu1), guarded_by(mu1))); // expected-warning 2{{only applies to fields and global variables}}
+void run() __attribute__((guarded_by(mu1), guarded_by(mu1))); // expected-warning 2{{only applies to non-static data members and global variables}}

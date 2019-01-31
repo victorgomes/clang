@@ -1,18 +1,16 @@
-//===--- Sanitizers.cpp - C Language Family Language Options ----*- C++ -*-===//
+//===- Sanitizers.cpp - C Language Family Language Options ----------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
 //  This file defines the classes from Sanitizers.h
 //
 //===----------------------------------------------------------------------===//
+
 #include "clang/Basic/Sanitizers.h"
-#include "clang/Basic/LLVM.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 
 using namespace clang;

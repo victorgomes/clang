@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -std=c++98 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++11 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++14 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++1z %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++17 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 
 // PR13819 -- __SIZE_TYPE__ is incompatible.
 typedef __SIZE_TYPE__ size_t; // expected-error 0-1 {{extension}}
@@ -679,7 +679,7 @@ namespace dr258 { // dr258: yes
   } f; // expected-error {{abstract}}
 }
 
-namespace dr259 { // dr259: 4.0
+namespace dr259 { // dr259: 4
   template<typename T> struct A {};
   template struct A<int>; // expected-note {{previous}}
   template struct A<int>; // expected-error {{duplicate explicit instantiation}}
@@ -718,7 +718,7 @@ namespace dr261 { // dr261: no
     A() {}
   };
 
-  // FIXME: These are ill-formed, with a required diagnostic, for the same
+  // FIXME: This is ill-formed, with a required diagnostic, for the same
   // reason.
   struct B {
     inline void operator delete(void*) __attribute__((unused));
@@ -726,7 +726,7 @@ namespace dr261 { // dr261: no
   };
   struct C {
     inline void operator delete(void*) __attribute__((unused));
-    virtual ~C() {}
+    virtual ~C() {} // expected-warning {{'operator delete' was marked unused but was used}}
   };
 
   struct D {
@@ -984,7 +984,7 @@ namespace dr289 { // dr289: yes
 namespace dr294 { // dr294: no
   void f() throw(int);
 #if __cplusplus > 201402L
-    // expected-error@-2 {{ISO C++1z does not allow}} expected-note@-2 {{use 'noexcept}}
+    // expected-error@-2 {{ISO C++17 does not allow}} expected-note@-2 {{use 'noexcept}}
 #endif
   int main() {
     (void)static_cast<void (*)() throw()>(f); // FIXME: ill-formed in C++14 and before
@@ -1001,20 +1001,20 @@ namespace dr294 { // dr294: no
 #endif
     (void)static_cast<void (*)() throw(int)>(f); // FIXME: ill-formed in C++14 and before
 #if __cplusplus > 201402L
-    // expected-error@-2 {{ISO C++1z does not allow}} expected-note@-2 {{use 'noexcept}}
+    // expected-error@-2 {{ISO C++17 does not allow}} expected-note@-2 {{use 'noexcept}}
 #endif
 
     void (*p)() throw() = f; // expected-error-re {{{{not superset|different exception specification}}}}
     void (*q)() throw(int) = f;
 #if __cplusplus > 201402L
-    // expected-error@-2 {{ISO C++1z does not allow}} expected-note@-2 {{use 'noexcept}}
+    // expected-error@-2 {{ISO C++17 does not allow}} expected-note@-2 {{use 'noexcept}}
 #endif
   }
 }
 
 namespace dr295 { // dr295: 3.7
   typedef int f();
-  const f g; // expected-warning {{'const' qualifier on function type 'f' (aka 'int ()') has no effect}}
+  const f g; // expected-warning {{'const' qualifier on function type 'dr295::f' (aka 'int ()') has no effect}}
   f &r = g;
   template<typename T> struct X {
     const T &f;
@@ -1022,10 +1022,10 @@ namespace dr295 { // dr295: 3.7
   X<f> x = {g};
 
   typedef int U();
-  typedef const U U; // expected-warning {{'const' qualifier on function type 'U' (aka 'int ()') has no effect}}
+  typedef const U U; // expected-warning {{'const' qualifier on function type 'dr295::U' (aka 'int ()') has no effect}}
 
   typedef int (*V)();
-  typedef volatile U *V; // expected-warning {{'volatile' qualifier on function type 'U' (aka 'int ()') has no effect}}
+  typedef volatile U *V; // expected-warning {{'volatile' qualifier on function type 'dr295::U' (aka 'int ()') has no effect}}
 }
 
 namespace dr296 { // dr296: yes
@@ -1053,7 +1053,7 @@ namespace dr298 { // dr298: yes
 
   B::B() {} // expected-error {{requires a type specifier}}
   B::A() {} // ok
-  C::~C() {} // expected-error {{destructor cannot be declared using a typedef 'C' (aka 'const dr298::A') of the class name}}
+  C::~C() {} // expected-error {{destructor cannot be declared using a typedef 'dr298::C' (aka 'const dr298::A') of the class name}}
 
   typedef struct D E; // expected-note {{here}}
   struct E {}; // expected-error {{conflicts with typedef}}

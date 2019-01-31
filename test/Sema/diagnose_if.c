@@ -70,14 +70,14 @@ void runVariable() {
 
 #define _overloadable __attribute__((overloadable))
 
-int ovl1(const char *n) _overloadable _diagnose_if(n, "oh no", "error"); // expected-note{{oh no}}
-int ovl1(void *m) _overloadable; // expected-note{{candidate function}}
+int ovl1(const char *n) _overloadable _diagnose_if(n, "oh no", "error"); // expected-note{{from 'diagnose_if'}}
+int ovl1(void *m) _overloadable;
 
 int ovl2(const char *n) _overloadable _diagnose_if(n, "oh no", "error"); // expected-note{{candidate function}}
 int ovl2(char *m) _overloadable; // expected-note{{candidate function}}
 void overloadsYay() {
   ovl1((void *)0);
-  ovl1(""); // expected-error{{call to unavailable function}}
+  ovl1(""); // expected-error{{oh no}}
 
   ovl2((void *)0); // expected-error{{ambiguous}}
 }
@@ -149,4 +149,21 @@ void runNoMsg() {
 void alwaysWarnWithArg(int a) _diagnose_if(1 || a, "alwaysWarn", "warning"); // expected-note{{from 'diagnose_if'}}
 void runAlwaysWarnWithArg(int a) {
   alwaysWarnWithArg(a); // expected-warning{{alwaysWarn}}
+}
+
+// Test that diagnose_if warnings generated in system headers are not ignored.
+#include "Inputs/diagnose-if-warn-system-header.h"
+
+// Bug: we would complain about `a` being undeclared if this was spelled
+// __diagnose_if__.
+void underbarName(int a) __attribute__((__diagnose_if__(a, "", "warning")));
+
+// PR38095
+void constCharStar(const char *str) __attribute__((__diagnose_if__(!str[0], "empty string not allowed", "error"))); // expected-note {{from}}
+void charStar(char *str) __attribute__((__diagnose_if__(!str[0], "empty string not allowed", "error"))); // expected-note {{from}}
+void runConstCharStar() {
+  constCharStar("foo");
+  charStar("bar");
+  constCharStar(""); // expected-error {{empty string not allowed}}
+  charStar(""); // expected-error {{empty string not allowed}}
 }

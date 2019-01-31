@@ -1,14 +1,13 @@
 //===--- OpenCLOptions.h ----------------------------------------*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// \brief Defines the clang::OpenCLOptions class.
+/// Defines the clang::OpenCLOptions class.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -19,7 +18,7 @@
 
 namespace clang {
 
-/// \brief OpenCL supported extensions and optional core features
+/// OpenCL supported extensions and optional core features
 class OpenCLOptions {
   struct Info {
     bool Supported; // Is this option supported
@@ -67,7 +66,7 @@ public:
     OptMap[Ext].Enabled = V;
   }
 
-  /// \brief Enable or disable support for OpenCL extensions
+  /// Enable or disable support for OpenCL extensions
   /// \param Ext name of the extension optionally prefixed with
   ///        '+' or '-'
   /// \param V used when \p Ext is not prefixed by '+' or '-'

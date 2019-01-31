@@ -1,9 +1,8 @@
 //===--- JumpDiagnostics.cpp - Protected scope jump analysis ------*- C++ -*-=//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -154,6 +153,10 @@ static ScopePair GetDiagForGotoScopeDecl(Sema &S, const Decl *D) {
         return ScopePair(diag::note_protected_by_objc_weak_init,
                          diag::note_exits_objc_weak);
 
+      case QualType::DK_nontrivial_c_struct:
+        return ScopePair(diag::note_protected_by_non_trivial_c_struct_init,
+                         diag::note_exits_dtor);
+
       case QualType::DK_cxx_destructor:
         OutDiag = diag::note_exits_dtor;
         break;
@@ -212,7 +215,7 @@ static ScopePair GetDiagForGotoScopeDecl(Sema &S, const Decl *D) {
   return ScopePair(0U, 0U);
 }
 
-/// \brief Build scope information for a declaration that is part of a DeclStmt.
+/// Build scope information for a declaration that is part of a DeclStmt.
 void JumpScopeChecker::BuildScopeInformation(Decl *D, unsigned &ParentScope) {
   // If this decl causes a new scope, push and switch to it.
   std::pair<unsigned,unsigned> Diags = GetDiagForGotoScopeDecl(S, D);
@@ -229,7 +232,7 @@ void JumpScopeChecker::BuildScopeInformation(Decl *D, unsigned &ParentScope) {
       BuildScopeInformation(Init, ParentScope);
 }
 
-/// \brief Build scope information for a captured block literal variables.
+/// Build scope information for a captured block literal variables.
 void JumpScopeChecker::BuildScopeInformation(VarDecl *D,
                                              const BlockDecl *BDecl,
                                              unsigned &ParentScope) {
@@ -253,6 +256,10 @@ void JumpScopeChecker::BuildScopeInformation(VarDecl *D,
       case QualType::DK_objc_weak_lifetime:
         Diags = ScopePair(diag::note_enters_block_captures_weak,
                           diag::note_exits_block_captures_weak);
+        break;
+      case QualType::DK_nontrivial_c_struct:
+        Diags = ScopePair(diag::note_enters_block_captures_non_trivial_c_struct,
+                          diag::note_exits_block_captures_non_trivial_c_struct);
         break;
       case QualType::DK_none:
         llvm_unreachable("non-lifetime captured variable");
@@ -287,6 +294,15 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
     IndirectJumpTargets.push_back(cast<AddrLabelExpr>(S)->getLabel());
     break;
 
+  case Stmt::ObjCForCollectionStmtClass: {
+    auto *CS = cast<ObjCForCollectionStmt>(S);
+    unsigned Diag = diag::note_protected_by_objc_fast_enumeration;
+    unsigned NewParentScope = Scopes.size();
+    Scopes.push_back(GotoScope(ParentScope, Diag, 0, S->getBeginLoc()));
+    BuildScopeInformation(CS->getBody(), NewParentScope);
+    return;
+  }
+
   case Stmt::IndirectGotoStmtClass:
     // "goto *&&lbl;" is a special case which we treat as equivalent
     // to a normal goto.  In addition, we don't calculate scope in the
@@ -314,7 +330,7 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
       BuildScopeInformation(Var, ParentScope);
       ++StmtsToSkip;
     }
-    // Fall through
+    LLVM_FALLTHROUGH;
 
   case Stmt::GotoStmtClass:
     // Remember both what scope a goto is in as well as the fact that we have
@@ -336,16 +352,16 @@ void JumpScopeChecker::BuildScopeInformation(Stmt *S,
 
     // Cannot jump into the middle of the condition.
     unsigned NewParentScope = Scopes.size();
-    Scopes.push_back(GotoScope(ParentScope, Diag, 0, IS->getLocStart()));
+    Scopes.push_back(GotoScope(ParentScope, Diag, 0, IS->getBeginLoc()));
     BuildScopeInformation(IS->getCond(), NewParentScope);
 
     // Jumps into either arm of an 'if constexpr' are not allowed.
     NewParentScope = Scopes.size();
-    Scopes.push_back(GotoScope(ParentScope, Diag, 0, IS->getLocStart()));
+    Scopes.push_back(GotoScope(ParentScope, Diag, 0, IS->getBeginLoc()));
     BuildScopeInformation(IS->getThen(), NewParentScope);
     if (Stmt *Else = IS->getElse()) {
       NewParentScope = Scopes.size();
-      Scopes.push_back(GotoScope(ParentScope, Diag, 0, IS->getLocStart()));
+      Scopes.push_back(GotoScope(ParentScope, Diag, 0, IS->getBeginLoc()));
       BuildScopeInformation(Else, NewParentScope);
     }
     return;
@@ -602,11 +618,11 @@ void JumpScopeChecker::VerifyJumps() {
         continue;
       SourceLocation Loc;
       if (CaseStmt *CS = dyn_cast<CaseStmt>(SC))
-        Loc = CS->getLocStart();
+        Loc = CS->getBeginLoc();
       else if (DefaultStmt *DS = dyn_cast<DefaultStmt>(SC))
-        Loc = DS->getLocStart();
+        Loc = DS->getBeginLoc();
       else
-        Loc = SC->getLocStart();
+        Loc = SC->getBeginLoc();
       CheckJump(SS, SC, Loc, diag::err_switch_into_protected_scope, 0,
                 diag::warn_cxx98_compat_switch_into_protected_scope);
     }
@@ -846,7 +862,7 @@ void JumpScopeChecker::CheckJump(Stmt *From, Stmt *To, SourceLocation DiagLoc,
     // less nested scope.  Check if it crosses a __finally along the way.
     for (unsigned I = FromScope; I > ToScope; I = Scopes[I].ParentScope) {
       if (Scopes[I].InDiag == diag::note_protected_by_seh_finally) {
-        S.Diag(From->getLocStart(), diag::warn_jump_out_of_seh_finally);
+        S.Diag(From->getBeginLoc(), diag::warn_jump_out_of_seh_finally);
         break;
       }
     }

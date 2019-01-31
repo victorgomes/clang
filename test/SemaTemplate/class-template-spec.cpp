@@ -78,9 +78,6 @@ template<> struct ::A<double>;
 
 namespace N {
   template<typename T> struct B; // expected-note {{explicitly specialized}}
-#if __cplusplus <= 199711L
-  // expected-note@-2 {{explicitly specialized}}
-#endif
 
   template<> struct ::N::B<char>; // okay
   template<> struct ::N::B<short>; // okay
@@ -92,9 +89,6 @@ namespace N {
 template<> struct N::B<int> { }; // okay
 
 template<> struct N::B<float> { };
-#if __cplusplus <= 199711L
-// expected-warning@-2 {{first declaration of class template specialization of 'B' outside namespace 'N' is a C++11 extension}}
-#endif
 
 
 namespace M {
@@ -121,9 +115,9 @@ class Wibble<int> { }; // expected-error{{cannot specialize a template template 
 
 namespace rdar9676205 {
   template<typename T>
-  struct X {
+  struct X { // expected-note {{here}}
     template<typename U>
-    struct X<U*> { // expected-error{{explicit specialization of 'X' in class scope}}
+    struct X<U*> { // expected-error{{partial specialization of 'X' not in a namespace enclosing}}
     };
   };
 
@@ -207,19 +201,19 @@ namespace NTTPTypeVsPartialOrder {
   struct X { typedef int value_type; };
   template<typename T> struct Y { typedef T value_type; };
 
-  template<typename T, typename T::value_type N> struct A; // expected-note {{template}}
+  template<typename T, typename T::value_type N> struct A;
   template<int N> struct A<X, N> {};
-  template<typename T, T N> struct A<Y<T>, N> {}; // expected-error {{not more specialized}} expected-note {{'T' vs 'typename Y<type-parameter-0-0>::value_type'}}
+  template<typename T, T N> struct A<Y<T>, N> {};
   A<X, 0> ax;
   A<Y<int>, 0> ay;
 
 
-  template<int, typename T, typename T::value_type> struct B; // expected-note {{template}}
-  template<typename T, typename T::value_type N> struct B<0, T, N>; // expected-note {{matches}}
+  template<int, typename T, typename T::value_type> struct B;
+  template<typename T, typename T::value_type N> struct B<0, T, N>;
   template<int N> struct B<0, X, N> {};
-  template<typename T, T N> struct B<0, Y<T>, N> {}; // expected-error {{not more specialized}} expected-note {{'T' vs 'typename Y<type-parameter-0-0>::value_type'}} expected-note {{matches}}
+  template<typename T, T N> struct B<0, Y<T>, N> {};
   B<0, X, 0> bx;
-  B<0, Y<int>, 0> by; // expected-error {{ambiguous}}
+  B<0, Y<int>, 0> by;
 }
 
 namespace DefaultArgVsPartialSpec {

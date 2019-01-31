@@ -1,9 +1,8 @@
 //===--- SanitizerMetadata.cpp - Blacklist for sanitizers -----------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -26,7 +25,9 @@ void SanitizerMetadata::reportGlobalToASan(llvm::GlobalVariable *GV,
                                            QualType Ty, bool IsDynInit,
                                            bool IsBlacklisted) {
   if (!CGM.getLangOpts().Sanitize.hasOneOf(SanitizerKind::Address |
-                                           SanitizerKind::KernelAddress))
+                                           SanitizerKind::KernelAddress |
+                                           SanitizerKind::HWAddress |
+                                           SanitizerKind::KernelHWAddress))
     return;
   IsDynInit &= !CGM.isInSanitizerBlacklist(GV, Loc, Ty, "init");
   IsBlacklisted |= CGM.isInSanitizerBlacklist(GV, Loc, Ty);
@@ -58,7 +59,9 @@ void SanitizerMetadata::reportGlobalToASan(llvm::GlobalVariable *GV,
 void SanitizerMetadata::reportGlobalToASan(llvm::GlobalVariable *GV,
                                            const VarDecl &D, bool IsDynInit) {
   if (!CGM.getLangOpts().Sanitize.hasOneOf(SanitizerKind::Address |
-                                           SanitizerKind::KernelAddress))
+                                           SanitizerKind::KernelAddress |
+                                           SanitizerKind::HWAddress |
+                                           SanitizerKind::KernelHWAddress))
     return;
   std::string QualName;
   llvm::raw_string_ostream OS(QualName);
@@ -76,7 +79,9 @@ void SanitizerMetadata::disableSanitizerForGlobal(llvm::GlobalVariable *GV) {
   // For now, just make sure the global is not modified by the ASan
   // instrumentation.
   if (CGM.getLangOpts().Sanitize.hasOneOf(SanitizerKind::Address |
-                                          SanitizerKind::KernelAddress))
+                                          SanitizerKind::KernelAddress |
+                                          SanitizerKind::HWAddress |
+                                          SanitizerKind::KernelHWAddress))
     reportGlobalToASan(GV, SourceLocation(), "", QualType(), false, true);
 }
 

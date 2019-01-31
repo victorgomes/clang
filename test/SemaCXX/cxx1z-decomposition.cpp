@@ -70,4 +70,32 @@ int error_recovery() {
   return foobar_; // expected-error {{undeclared identifier 'foobar_'}}
 }
 
+// PR32172
+template <class T> void dependent_foreach(T t) {
+  for (auto [a,b,c] : t)
+    a,b,c;
+}
+
+struct PR37352 {
+  int n;
+  void f() { static auto [a] = *this; } // expected-error {{cannot be declared 'static'}}
+};
+
+namespace instantiate_template {
+
+template <typename T1, typename T2>
+struct pair {
+  T1 a;
+  T2 b;
+};
+
+const pair<int, int> &f1();
+
+int f2() {
+  const auto &[a, b] = f1();
+  return a + b;
+}
+
+} // namespace instantiate_template
+
 // FIXME: by-value array copies

@@ -1,9 +1,8 @@
 //===--- GeneratePCH.cpp - Sema Consumer for PCH Generation -----*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -27,10 +26,11 @@ PCHGenerator::PCHGenerator(
     ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
     bool AllowASTWithErrors, bool IncludeTimestamps)
     : PP(PP), OutputFile(OutputFile), isysroot(isysroot.str()),
-      SemaPtr(nullptr), Buffer(Buffer), Stream(Buffer->Data),
-      Writer(Stream, Extensions, IncludeTimestamps),
+      SemaPtr(nullptr), Buffer(std::move(Buffer)), Stream(this->Buffer->Data),
+      Writer(Stream, this->Buffer->Data, PP.getPCMCache(), Extensions,
+             IncludeTimestamps),
       AllowASTWithErrors(AllowASTWithErrors) {
-  Buffer->IsComplete = false;
+  this->Buffer->IsComplete = false;
 }
 
 PCHGenerator::~PCHGenerator() {

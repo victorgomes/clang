@@ -1,9 +1,8 @@
 //===--- PPCaching.cpp - Handle caching lexed tokens ----------------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 //
@@ -35,6 +34,29 @@ void Preprocessor::CommitBacktrackedTokens() {
   BacktrackPositions.pop_back();
 }
 
+Preprocessor::CachedTokensRange Preprocessor::LastCachedTokenRange() {
+  assert(isBacktrackEnabled());
+  auto PrevCachedLexPos = BacktrackPositions.back();
+  return CachedTokensRange{PrevCachedLexPos, CachedLexPos};
+}
+
+void Preprocessor::EraseCachedTokens(CachedTokensRange TokenRange) {
+  assert(TokenRange.Begin <= TokenRange.End);
+  if (CachedLexPos == TokenRange.Begin && TokenRange.Begin != TokenRange.End) {
+    // We have backtracked to the start of the token range as we want to consume
+    // them again. Erase the tokens only after consuming then.
+    assert(!CachedTokenRangeToErase);
+    CachedTokenRangeToErase = TokenRange;
+    return;
+  }
+  // The cached tokens were committed, so they should be erased now.
+  assert(TokenRange.End == CachedLexPos);
+  CachedTokens.erase(CachedTokens.begin() + TokenRange.Begin,
+                     CachedTokens.begin() + TokenRange.End);
+  CachedLexPos = TokenRange.Begin;
+  ExitCachingLexMode();
+}
+
 // Make Preprocessor re-lex the tokens that were lexed since
 // EnableBacktrackAtThisPos() was previously called.
 void Preprocessor::Backtrack() {
@@ -51,6 +73,13 @@ void Preprocessor::CachingLex(Token &Result) {
 
   if (CachedLexPos < CachedTokens.size()) {
     Result = CachedTokens[CachedLexPos++];
+    // Erase the some of the cached tokens after they are consumed when
+    // asked to do so.
+    if (CachedTokenRangeToErase &&
+        CachedTokenRangeToErase->End == CachedLexPos) {
+      EraseCachedTokens(*CachedTokenRangeToErase);
+      CachedTokenRangeToErase = None;
+    }
     return;
   }
 
@@ -75,8 +104,10 @@ void Preprocessor::CachingLex(Token &Result) {
 }
 
 void Preprocessor::EnterCachingLexMode() {
-  if (InCachingLexMode())
+  if (InCachingLexMode()) {
+    assert(CurLexerKind == CLK_CachingLexer && "Unexpected lexer kind");
     return;
+  }
 
   PushIncludeMacroStack();
   CurLexerKind = CLK_CachingLexer;

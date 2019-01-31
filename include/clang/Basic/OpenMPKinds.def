@@ -1,13 +1,12 @@
 //===--- OpenMPKinds.def - OpenMP directives and clauses list ---*- C++ -*-===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 /// \file
-/// \brief This file defines the list of supported OpenMP directives and
+/// This file defines the list of supported OpenMP directives and
 /// clauses.
 ///
 //===----------------------------------------------------------------------===//
@@ -56,6 +55,9 @@
 #endif
 #ifndef OPENMP_TARGET_CLAUSE
 #  define OPENMP_TARGET_CLAUSE(Name)
+#endif
+#ifndef OPENMP_REQUIRES_CLAUSE
+# define OPENMP_REQUIRES_CLAUSE(Name)
 #endif
 #ifndef OPENMP_TARGET_DATA_CLAUSE
 #  define OPENMP_TARGET_DATA_CLAUSE(Name)
@@ -117,11 +119,17 @@
 #ifndef OPENMP_MAP_KIND
 #define OPENMP_MAP_KIND(Name)
 #endif
+#ifndef OPENMP_MAP_MODIFIER_KIND
+#define OPENMP_MAP_MODIFIER_KIND(Name)
+#endif
 #ifndef OPENMP_DIST_SCHEDULE_KIND
 #define OPENMP_DIST_SCHEDULE_KIND(Name)
 #endif
 #ifndef OPENMP_DEFAULTMAP_KIND
 #define OPENMP_DEFAULTMAP_KIND(Name)
+#endif
+#ifndef OPENMP_ATOMIC_DEFAULT_MEM_ORDER_KIND
+#define OPENMP_ATOMIC_DEFAULT_MEM_ORDER_KIND(Name)
 #endif
 #ifndef OPENMP_DEFAULTMAP_MODIFIER
 #define OPENMP_DEFAULTMAP_MODIFIER(Name)
@@ -165,6 +173,12 @@
 #ifndef OPENMP_TARGET_TEAMS_DISTRIBUTE_PARALLEL_FOR_SIMD_CLAUSE
 #define OPENMP_TARGET_TEAMS_DISTRIBUTE_PARALLEL_FOR_SIMD_CLAUSE(Name)
 #endif
+#ifndef OPENMP_TARGET_TEAMS_DISTRIBUTE_SIMD_CLAUSE
+#define OPENMP_TARGET_TEAMS_DISTRIBUTE_SIMD_CLAUSE(Name)
+#endif
+#ifndef OPENMP_TASKGROUP_CLAUSE
+#define OPENMP_TASKGROUP_CLAUSE(Name)
+#endif
 
 // OpenMP directives.
 OPENMP_DIRECTIVE(threadprivate)
@@ -187,6 +201,7 @@ OPENMP_DIRECTIVE(atomic)
 OPENMP_DIRECTIVE(target)
 OPENMP_DIRECTIVE(teams)
 OPENMP_DIRECTIVE(cancel)
+OPENMP_DIRECTIVE(requires)
 OPENMP_DIRECTIVE_EXT(target_data, "target data")
 OPENMP_DIRECTIVE_EXT(target_enter_data, "target enter data")
 OPENMP_DIRECTIVE_EXT(target_exit_data, "target exit data")
@@ -218,6 +233,7 @@ OPENMP_DIRECTIVE_EXT(target_teams, "target teams")
 OPENMP_DIRECTIVE_EXT(target_teams_distribute, "target teams distribute")
 OPENMP_DIRECTIVE_EXT(target_teams_distribute_parallel_for, "target teams distribute parallel for")
 OPENMP_DIRECTIVE_EXT(target_teams_distribute_parallel_for_simd, "target teams distribute parallel for simd")
+OPENMP_DIRECTIVE_EXT(target_teams_distribute_simd, "target teams distribute simd")
 
 // OpenMP clauses.
 OPENMP_CLAUSE(if, OMPIfClause)
@@ -242,7 +258,6 @@ OPENMP_CLAUSE(ordered, OMPOrderedClause)
 OPENMP_CLAUSE(nowait, OMPNowaitClause)
 OPENMP_CLAUSE(untied, OMPUntiedClause)
 OPENMP_CLAUSE(mergeable, OMPMergeableClause)
-OPENMP_CLAUSE(flush, OMPFlushClause)
 OPENMP_CLAUSE(read, OMPReadClause)
 OPENMP_CLAUSE(write, OMPWriteClause)
 OPENMP_CLAUSE(update, OMPUpdateClause)
@@ -266,6 +281,13 @@ OPENMP_CLAUSE(to, OMPToClause)
 OPENMP_CLAUSE(from, OMPFromClause)
 OPENMP_CLAUSE(use_device_ptr, OMPUseDevicePtrClause)
 OPENMP_CLAUSE(is_device_ptr, OMPIsDevicePtrClause)
+OPENMP_CLAUSE(task_reduction,  OMPTaskReductionClause)
+OPENMP_CLAUSE(in_reduction,  OMPInReductionClause)
+OPENMP_CLAUSE(unified_address, OMPUnifiedAddressClause)
+OPENMP_CLAUSE(unified_shared_memory, OMPUnifiedSharedMemoryClause)
+OPENMP_CLAUSE(reverse_offload, OMPReverseOffloadClause)
+OPENMP_CLAUSE(dynamic_allocators, OMPDynamicAllocatorsClause)
+OPENMP_CLAUSE(atomic_default_mem_order, OMPAtomicDefaultMemOrderClause)
 
 // Clauses allowed for OpenMP directive 'parallel'.
 OPENMP_PARALLEL_CLAUSE(if)
@@ -426,6 +448,7 @@ OPENMP_TASK_CLAUSE(untied)
 OPENMP_TASK_CLAUSE(mergeable)
 OPENMP_TASK_CLAUSE(depend)
 OPENMP_TASK_CLAUSE(priority)
+OPENMP_TASK_CLAUSE(in_reduction)
 
 // Clauses allowed for OpenMP directive 'atomic'.
 OPENMP_ATOMIC_CLAUSE(read)
@@ -444,9 +467,21 @@ OPENMP_TARGET_CLAUSE(depend)
 OPENMP_TARGET_CLAUSE(defaultmap)
 OPENMP_TARGET_CLAUSE(firstprivate)
 OPENMP_TARGET_CLAUSE(is_device_ptr)
+OPENMP_TARGET_CLAUSE(reduction)
+
+// Clauses allowed for OpenMP directive 'requires'.
+OPENMP_REQUIRES_CLAUSE(unified_address)
+OPENMP_REQUIRES_CLAUSE(unified_shared_memory)
+OPENMP_REQUIRES_CLAUSE(reverse_offload)
+OPENMP_REQUIRES_CLAUSE(dynamic_allocators)
+OPENMP_REQUIRES_CLAUSE(atomic_default_mem_order)
+
+// Modifiers for 'atomic_default_mem_order' clause.
+OPENMP_ATOMIC_DEFAULT_MEM_ORDER_KIND(seq_cst)
+OPENMP_ATOMIC_DEFAULT_MEM_ORDER_KIND(acq_rel)
+OPENMP_ATOMIC_DEFAULT_MEM_ORDER_KIND(relaxed)
 
 // Clauses allowed for OpenMP directive 'target data'.
-// TODO More clauses for 'target data' directive.
 OPENMP_TARGET_DATA_CLAUSE(if)
 OPENMP_TARGET_DATA_CLAUSE(device)
 OPENMP_TARGET_DATA_CLAUSE(map)
@@ -483,7 +518,6 @@ OPENMP_TARGET_PARALLEL_CLAUSE(reduction)
 OPENMP_TARGET_PARALLEL_CLAUSE(is_device_ptr)
 
 // Clauses allowed for OpenMP directive 'target parallel for'.
-// TODO: add target clauses 'is_device_ptr'
 OPENMP_TARGET_PARALLEL_FOR_CLAUSE(if)
 OPENMP_TARGET_PARALLEL_FOR_CLAUSE(device)
 OPENMP_TARGET_PARALLEL_FOR_CLAUSE(map)
@@ -502,9 +536,9 @@ OPENMP_TARGET_PARALLEL_FOR_CLAUSE(collapse)
 OPENMP_TARGET_PARALLEL_FOR_CLAUSE(schedule)
 OPENMP_TARGET_PARALLEL_FOR_CLAUSE(ordered)
 OPENMP_TARGET_PARALLEL_FOR_CLAUSE(linear)
+OPENMP_TARGET_PARALLEL_FOR_CLAUSE(is_device_ptr)
 
 // Clauses allowed for OpenMP directive 'target update'.
-// TODO More clauses for 'target update' directive.
 OPENMP_TARGET_UPDATE_CLAUSE(if)
 OPENMP_TARGET_UPDATE_CLAUSE(device)
 OPENMP_TARGET_UPDATE_CLAUSE(to)
@@ -513,7 +547,6 @@ OPENMP_TARGET_UPDATE_CLAUSE(nowait)
 OPENMP_TARGET_UPDATE_CLAUSE(depend)
 
 // Clauses allowed for OpenMP directive 'teams'.
-// TODO More clauses for 'teams' directive.
 OPENMP_TEAMS_CLAUSE(default)
 OPENMP_TEAMS_CLAUSE(private)
 OPENMP_TEAMS_CLAUSE(firstprivate)
@@ -523,19 +556,21 @@ OPENMP_TEAMS_CLAUSE(num_teams)
 OPENMP_TEAMS_CLAUSE(thread_limit)
 
 // Clauses allowed for OpenMP directive 'ordered'.
-// TODO More clauses for 'ordered' directive.
 OPENMP_ORDERED_CLAUSE(threads)
 OPENMP_ORDERED_CLAUSE(simd)
 OPENMP_ORDERED_CLAUSE(depend)
 
-// Map types and map type modifier for 'map' clause.
+// Map types for 'map' clause.
 OPENMP_MAP_KIND(alloc)
 OPENMP_MAP_KIND(to)
 OPENMP_MAP_KIND(from)
 OPENMP_MAP_KIND(tofrom)
 OPENMP_MAP_KIND(delete)
 OPENMP_MAP_KIND(release)
-OPENMP_MAP_KIND(always)
+
+// Map-type-modifiers for 'map' clause.
+OPENMP_MAP_MODIFIER_KIND(always)
+OPENMP_MAP_MODIFIER_KIND(close)
 
 // Clauses allowed for OpenMP directive 'taskloop'.
 OPENMP_TASKLOOP_CLAUSE(if)
@@ -552,6 +587,8 @@ OPENMP_TASKLOOP_CLAUSE(priority)
 OPENMP_TASKLOOP_CLAUSE(grainsize)
 OPENMP_TASKLOOP_CLAUSE(nogroup)
 OPENMP_TASKLOOP_CLAUSE(num_tasks)
+OPENMP_TASKLOOP_CLAUSE(reduction)
+OPENMP_TASKLOOP_CLAUSE(in_reduction)
 
 // Clauses allowed for OpenMP directive 'taskloop simd'.
 OPENMP_TASKLOOP_SIMD_CLAUSE(if)
@@ -572,6 +609,8 @@ OPENMP_TASKLOOP_SIMD_CLAUSE(simdlen)
 OPENMP_TASKLOOP_SIMD_CLAUSE(grainsize)
 OPENMP_TASKLOOP_SIMD_CLAUSE(nogroup)
 OPENMP_TASKLOOP_SIMD_CLAUSE(num_tasks)
+OPENMP_TASKLOOP_SIMD_CLAUSE(reduction)
+OPENMP_TASKLOOP_SIMD_CLAUSE(in_reduction)
 
 // Clauses allowed for OpenMP directive 'critical'.
 OPENMP_CRITICAL_CLAUSE(hint)
@@ -633,7 +672,6 @@ OPENMP_DISTRIBUTE_SIMD_CLAUSE(simdlen)
 OPENMP_DISTRIBUTE_SIMD_CLAUSE(reduction)
 
 // Clauses allowed for OpenMP directive 'target parallel for simd'.
-// TODO: add target clauses 'is_device_ptr'
 OPENMP_TARGET_PARALLEL_FOR_SIMD_CLAUSE(if)
 OPENMP_TARGET_PARALLEL_FOR_SIMD_CLAUSE(device)
 OPENMP_TARGET_PARALLEL_FOR_SIMD_CLAUSE(map)
@@ -655,6 +693,7 @@ OPENMP_TARGET_PARALLEL_FOR_SIMD_CLAUSE(linear)
 OPENMP_TARGET_PARALLEL_FOR_SIMD_CLAUSE(safelen)
 OPENMP_TARGET_PARALLEL_FOR_SIMD_CLAUSE(simdlen)
 OPENMP_TARGET_PARALLEL_FOR_SIMD_CLAUSE(aligned)
+OPENMP_TARGET_PARALLEL_FOR_SIMD_CLAUSE(is_device_ptr)
 
 // Clauses allowed for OpenMP directive 'target simd'.
 OPENMP_TARGET_SIMD_CLAUSE(if)
@@ -735,9 +774,9 @@ OPENMP_TEAMS_DISTRIBUTE_PARALLEL_FOR_CLAUSE(private)
 OPENMP_TEAMS_DISTRIBUTE_PARALLEL_FOR_CLAUSE(shared)
 OPENMP_TEAMS_DISTRIBUTE_PARALLEL_FOR_CLAUSE(reduction)
 OPENMP_TEAMS_DISTRIBUTE_PARALLEL_FOR_CLAUSE(schedule)
-OPENMP_TEAMS_DISTRIBUTE_PARALLEL_FOR_CLAUSE(linear)
 OPENMP_TEAMS_DISTRIBUTE_PARALLEL_FOR_CLAUSE(num_teams)
 OPENMP_TEAMS_DISTRIBUTE_PARALLEL_FOR_CLAUSE(thread_limit)
+OPENMP_TEAMS_DISTRIBUTE_PARALLEL_FOR_CLAUSE(copyin)
 
 // Clauses allowed for OpenMP directive 'target teams'.
 OPENMP_TARGET_TEAMS_CLAUSE(if)
@@ -795,7 +834,6 @@ OPENMP_TARGET_TEAMS_DISTRIBUTE_PARALLEL_FOR_CLAUSE(dist_schedule)
 OPENMP_TARGET_TEAMS_DISTRIBUTE_PARALLEL_FOR_CLAUSE(num_threads)
 OPENMP_TARGET_TEAMS_DISTRIBUTE_PARALLEL_FOR_CLAUSE(proc_bind)
 OPENMP_TARGET_TEAMS_DISTRIBUTE_PARALLEL_FOR_CLAUSE(schedule)
-OPENMP_TARGET_TEAMS_DISTRIBUTE_PARALLEL_FOR_CLAUSE(linear)
 
 // Clauses allowed for OpenMP directive
 // 'target teams distribute parallel for simd'.
@@ -824,6 +862,32 @@ OPENMP_TARGET_TEAMS_DISTRIBUTE_PARALLEL_FOR_SIMD_CLAUSE(aligned)
 OPENMP_TARGET_TEAMS_DISTRIBUTE_PARALLEL_FOR_SIMD_CLAUSE(safelen)
 OPENMP_TARGET_TEAMS_DISTRIBUTE_PARALLEL_FOR_SIMD_CLAUSE(simdlen)
 
+// Clauses allowed for OpenMP directive 'target teams distribute simd'.
+OPENMP_TARGET_TEAMS_DISTRIBUTE_SIMD_CLAUSE(if)
+OPENMP_TARGET_TEAMS_DISTRIBUTE_SIMD_CLAUSE(device)
+OPENMP_TARGET_TEAMS_DISTRIBUTE_SIMD_CLAUSE(map)
+OPENMP_TARGET_TEAMS_DISTRIBUTE_SIMD_CLAUSE(private)
+OPENMP_TARGET_TEAMS_DISTRIBUTE_SIMD_CLAUSE(nowait)
+OPENMP_TARGET_TEAMS_DISTRIBUTE_SIMD_CLAUSE(depend)
+OPENMP_TARGET_TEAMS_DISTRIBUTE_SIMD_CLAUSE(defaultmap)
+OPENMP_TARGET_TEAMS_DISTRIBUTE_SIMD_CLAUSE(firstprivate)
+OPENMP_TARGET_TEAMS_DISTRIBUTE_SIMD_CLAUSE(lastprivate)
+OPENMP_TARGET_TEAMS_DISTRIBUTE_SIMD_CLAUSE(is_device_ptr)
+OPENMP_TARGET_TEAMS_DISTRIBUTE_SIMD_CLAUSE(shared)
+OPENMP_TARGET_TEAMS_DISTRIBUTE_SIMD_CLAUSE(reduction)
+OPENMP_TARGET_TEAMS_DISTRIBUTE_SIMD_CLAUSE(num_teams)
+OPENMP_TARGET_TEAMS_DISTRIBUTE_SIMD_CLAUSE(thread_limit)
+OPENMP_TARGET_TEAMS_DISTRIBUTE_SIMD_CLAUSE(collapse)
+OPENMP_TARGET_TEAMS_DISTRIBUTE_SIMD_CLAUSE(dist_schedule)
+OPENMP_TARGET_TEAMS_DISTRIBUTE_SIMD_CLAUSE(linear)
+OPENMP_TARGET_TEAMS_DISTRIBUTE_SIMD_CLAUSE(aligned)
+OPENMP_TARGET_TEAMS_DISTRIBUTE_SIMD_CLAUSE(safelen)
+OPENMP_TARGET_TEAMS_DISTRIBUTE_SIMD_CLAUSE(simdlen)
+
+// Clauses allowed for OpenMP directive 'taskgroup'.
+OPENMP_TASKGROUP_CLAUSE(task_reduction)
+
+#undef OPENMP_TASKGROUP_CLAUSE
 #undef OPENMP_TASKLOOP_SIMD_CLAUSE
 #undef OPENMP_TASKLOOP_CLAUSE
 #undef OPENMP_LINEAR_KIND
@@ -847,6 +911,8 @@ OPENMP_TARGET_TEAMS_DISTRIBUTE_PARALLEL_FOR_SIMD_CLAUSE(simdlen)
 #undef OPENMP_TASK_CLAUSE
 #undef OPENMP_ATOMIC_CLAUSE
 #undef OPENMP_TARGET_CLAUSE
+#undef OPENMP_REQUIRES_CLAUSE
+#undef OPENMP_ATOMIC_DEFAULT_MEM_ORDER_KIND
 #undef OPENMP_TARGET_DATA_CLAUSE
 #undef OPENMP_TARGET_ENTER_DATA_CLAUSE
 #undef OPENMP_TARGET_EXIT_DATA_CLAUSE
@@ -857,6 +923,7 @@ OPENMP_TARGET_TEAMS_DISTRIBUTE_PARALLEL_FOR_SIMD_CLAUSE(simdlen)
 #undef OPENMP_FOR_CLAUSE
 #undef OPENMP_FOR_SIMD_CLAUSE
 #undef OPENMP_MAP_KIND
+#undef OPENMP_MAP_MODIFIER_KIND
 #undef OPENMP_DISTRIBUTE_CLAUSE
 #undef OPENMP_DIST_SCHEDULE_KIND
 #undef OPENMP_DEFAULTMAP_KIND
@@ -875,3 +942,4 @@ OPENMP_TARGET_TEAMS_DISTRIBUTE_PARALLEL_FOR_SIMD_CLAUSE(simdlen)
 #undef OPENMP_TARGET_TEAMS_DISTRIBUTE_CLAUSE
 #undef OPENMP_TARGET_TEAMS_DISTRIBUTE_PARALLEL_FOR_CLAUSE
 #undef OPENMP_TARGET_TEAMS_DISTRIBUTE_PARALLEL_FOR_SIMD_CLAUSE
+#undef OPENMP_TARGET_TEAMS_DISTRIBUTE_SIMD_CLAUSE

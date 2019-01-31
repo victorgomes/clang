@@ -13,6 +13,9 @@
 // RUN: %clang_cc1 %s -Rpass=inline -Rno-everything -emit-llvm -o - 2>&1 | FileCheck %s --check-prefix=CHECK-NO-REMARKS
 // RUN: %clang_cc1 %s -Rpass=inline -Rno-everything -Reverything -emit-llvm -o - 2>&1 | FileCheck %s --check-prefix=CHECK-REMARKS
 //
+// Check that -w doesn't disable remarks.
+// RUN: %clang_cc1 %s -Rpass=inline -w -emit-llvm -o - 2>&1 | FileCheck %s --check-prefix=CHECK-REMARKS
+//
 // FIXME: -Reverything should imply -Rpass=.*.
 // RUN: %clang_cc1 %s -Reverything -emit-llvm -o - 2>/dev/null | FileCheck %s --check-prefix=CHECK-NO-REMARKS
 //
@@ -42,11 +45,8 @@ float foz(int x, int y) { return x * y; }
 // twice.
 //
 int bar(int j) {
-// expected-remark@+6 {{foz should never be inlined (cost=never)}}
-// expected-remark@+5 {{foz will not be inlined into bar}}
-// expected-remark@+4 {{foz should never be inlined}}
-// expected-remark@+3 {{foz will not be inlined into bar}}
-// expected-remark@+2 {{foo should always be inlined}}
+// expected-remark@+3 {{foz not inlined into bar because it should never be inlined (cost=never)}}
+// expected-remark@+2 {{foz not inlined into bar because it should never be inlined (cost=never)}}
 // expected-remark@+1 {{foo inlined into bar}}
   return foo(j, j - 2) * foz(j - 2, j);
 }

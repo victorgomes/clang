@@ -1,9 +1,8 @@
 //===- unittests/Lex/PPConditionalDirectiveRecordTest.cpp-PP directive tests =//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -12,6 +11,7 @@
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/LangOptions.h"
+#include "clang/Basic/MemoryBufferCache.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
@@ -50,24 +50,6 @@ protected:
   IntrusiveRefCntPtr<TargetInfo> Target;
 };
 
-class VoidModuleLoader : public ModuleLoader {
-  ModuleLoadResult loadModule(SourceLocation ImportLoc, 
-                              ModuleIdPath Path,
-                              Module::NameVisibilityKind Visibility,
-                              bool IsInclusionDirective) override {
-    return ModuleLoadResult();
-  }
-
-  void makeModuleVisible(Module *Mod,
-                         Module::NameVisibilityKind Visibility,
-                         SourceLocation ImportLoc) override { }
-
-  GlobalModuleIndex *loadGlobalModuleIndex(SourceLocation TriggerLoc) override
-    { return nullptr; }
-  bool lookupMissingImports(StringRef Name, SourceLocation TriggerLoc) override
-    { return 0; }
-};
-
 TEST_F(PPConditionalDirectiveRecordTest, PPRecAPI) {
   const char *source =
       "0 1\n"
@@ -92,11 +74,12 @@ TEST_F(PPConditionalDirectiveRecordTest, PPRecAPI) {
       llvm::MemoryBuffer::getMemBuffer(source);
   SourceMgr.setMainFileID(SourceMgr.createFileID(std::move(Buf)));
 
-  VoidModuleLoader ModLoader;
+  TrivialModuleLoader ModLoader;
+  MemoryBufferCache PCMCache;
   HeaderSearch HeaderInfo(std::make_shared<HeaderSearchOptions>(), SourceMgr,
                           Diags, LangOpts, Target.get());
   Preprocessor PP(std::make_shared<PreprocessorOptions>(), Diags, LangOpts,
-                  SourceMgr, HeaderInfo, ModLoader,
+                  SourceMgr, PCMCache, HeaderInfo, ModLoader,
                   /*IILookup =*/nullptr,
                   /*OwnsHeaderSearch =*/false);
   PP.Initialize(*Target);
